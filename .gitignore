@@ -22,3 +22,9 @@ _testmain.go
 *.exe
 *.test
 *.prof
+
+# twittergo
+data/CREDENTIALS
+
+# STC dataset
+data/twitter_id_str_data.txt
