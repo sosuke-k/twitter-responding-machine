@@ -84,9 +84,9 @@ func SaveTweet(db *gorm.DB, client *twittergo.Client, id string) (tweetID int, e
 			if err != nil {
 				return
 			}
-			logger.Printf("user whose name is %s exists.\n", nickname)
-		} else {
 			logger.Printf("insert user(%s)\n", nickname)
+		} else {
+			logger.Printf("user whose name is %s exists.\n", nickname)
 		}
 
 		data = Tweet{
