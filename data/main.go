@@ -19,8 +19,8 @@ var reset *bool
 var start *int
 var startIdx int
 
-// EveryFifteen called per fifteen minutes
-func EveryFifteen() {
+// EverySeventeen called per 17 minutes
+func EverySeventeen() {
 	logger := GetLogger()
 
 	var (
@@ -99,7 +99,7 @@ func main() {
 	fmt.Fprintf(os.Stdout, "starting at %d ...\n", *start)
 
 	c := cron.New()
-	c.AddFunc("0 */15 * * * *", EveryFifteen)
+	c.AddFunc("@every 17m", EverySeventeen)
 	c.Start()
 
 	for {

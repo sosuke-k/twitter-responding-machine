@@ -72,7 +72,17 @@ options:
 ### Cron
 
 There is [API Rate Limits](https://dev.twitter.com/rest/public/rate-limiting) of Twitter API Requests.
-I call function every fifteen minutes, so many many many long hours......
+I call function every 17 minutes, so many many many long hours......
+
+First, I try every 15 minutes, but this
+
+```
+2015/11/12 13:01:41 Rate limited, reset at 2015-11-12 13:15:00 +0900 JST
+2015/11/12 13:01:41 Next, start at line index 90
+2015/11/12 13:15:00 index of lines is 90
+2015/11/12 13:15:00 Rate limited, reset at 2015-11-12 13:15:00 +0900 JST
+2015/11/12 13:15:00 Next, start at line index 90
+```
 
 ### Log
 
