@@ -37,9 +37,9 @@ CREDENTIALS sample:
 ### MySQL
 
 ```
-CREATE USER trm@localhost IDENTIFIED BY trm;
-CREATE DATABASE trm DEFAULT CHARACTER SET utf8;
-GRANT ALL PRIVILEGES ON trm.* TO trm@localhost;
+mysql> CREATE USER 'trm'@'localhost' IDENTIFIED BY 'trm';
+mysql> CREATE DATABASE trm DEFAULT CHARACTER SET utf8;
+mysql> GRANT ALL PRIVILEGES ON trm.* TO trm@localhost;
 ```
 
 If you change username, databasename and password, edit `trm/database.go`.
