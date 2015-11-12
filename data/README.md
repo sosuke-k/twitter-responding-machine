@@ -44,6 +44,16 @@ mysql> GRANT ALL PRIVILEGES ON trm.* TO trm@localhost;
 
 If you change username, databasename and password, edit `trm/database.go`.
 
+### Dependencies
+
+please `go get`
+
+* github.com/codingneo/twittergo
+* github.com/go-sql-driver/mysql
+* github.com/jinzhu/gorm
+* github.com/kurrik/oauth1a
+* github.com/robfig/cron
+
 ## using
 
 ```
