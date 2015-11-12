@@ -28,7 +28,9 @@ func LoadCredentials() (client *twittergo.Client, err error) {
 }
 
 // GetTweet return Tweet and error
-func GetTweet(client *twittergo.Client, id string) (tweet *twittergo.Tweet, err error) {
+func GetTweet(client *twittergo.Client, id string) (tweet *twittergo.Tweet, err error, rateLimit bool) {
+	logger := GetLogger()
+	rateLimit = false
 	var (
 		req  *http.Request
 		resp *twittergo.APIResponse
@@ -38,31 +40,33 @@ func GetTweet(client *twittergo.Client, id string) (tweet *twittergo.Tweet, err 
 	url := fmt.Sprintf("%v?%v", "/1.1/statuses/show.json", query.Encode())
 	req, err = http.NewRequest("GET", url, nil)
 	if err != nil {
-		fmt.Printf("Could not parse request: %v\n", err)
-		fmt.Println("Please see https://twitter.com/statuses/" + id)
+		logger.Printf("Could not parse request: %v\n", err)
+		logger.Println("Please see https://twitter.com/statuses/" + id)
 		return
 	}
 	resp, err = client.SendRequest(req)
 	if err != nil {
-		fmt.Printf("Could not send request: %v\n", err)
-		fmt.Println("Please see https://twitter.com/statuses/" + id)
+		logger.Printf("Could not send request: %v\n", err)
+		logger.Println("Please see https://twitter.com/statuses/" + id)
 		return
 	}
 	tweet = &twittergo.Tweet{}
 	err = resp.Parse(tweet)
 	if err != nil {
 		if rle, ok := err.(twittergo.RateLimitError); ok {
-			fmt.Printf("Rate limited, reset at %v\n", rle.Reset)
+			logger.Printf("Rate limited, reset at %v\n", rle.Reset)
+			rateLimit = true
+			return
 		} else if errs, ok := err.(twittergo.Errors); ok {
 			for i, val := range errs.Errors() {
-				fmt.Printf("Error #%v - ", i+1)
-				fmt.Printf("Code: %v ", val.Code())
-				fmt.Printf("Msg: %v\n", val.Message())
+				logger.Printf("Error #%v - ", i+1)
+				logger.Printf("Code: %v ", val.Code())
+				logger.Printf("Msg: %v\n", val.Message())
 			}
 		} else {
-			fmt.Printf("Problem parsing response: %v\n", err)
+			logger.Printf("Problem parsing response: %v\n", err)
 		}
-		fmt.Println("Please see https://twitter.com/statuses/" + id)
+		logger.Println("Please see https://twitter.com/statuses/" + id)
 		return
 	}
 	return

@@ -28,3 +28,6 @@ data/CREDENTIALS
 
 # STC dataset
 data/twitter_id_str_data.txt
+
+# log
+data/trm.log

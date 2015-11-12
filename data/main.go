@@ -1,43 +1,27 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strconv"
 	"strings"
+	"time"
 
 	"github.com/codingneo/twittergo"
 	"github.com/jinzhu/gorm"
+	"github.com/robfig/cron"
 
 	. "./trm"
 )
 
-// ParseTweet parse twittergo.Tweet to trm.Tweet.
-func ParseTweet(id string, tweet *twittergo.Tweet) (model Tweet, err error) {
-	if tweet == nil {
-		model = Tweet{
-			TwitterID: id,
-			Success:   0,
-		}
-		return
-	}
-	// t, err := time.Parse(time.RFC3339, item.Snippet.PublishedAt)
-	// if err != nil {
-	// 	return
-	// }
-	text := tweet.Text()
-	t := tweet.CreatedAt()
-	model = Tweet{
-		TwitterID: id,
-		Success:   1,
-		Text:      text,
-		CreatedAt: t,
-	}
-	return
-}
+var reset *bool
+var start *int
+var startIdx int
 
-func main() {
+// EveryFifteen called per fifteen minutes
+func EveryFifteen() {
+	logger := GetLogger()
 
 	var (
 		err    error
@@ -50,48 +34,77 @@ func main() {
 		return
 	}
 	defer db.Close()
-	db.DropTableIfExists(&User{})
-	db.DropTableIfExists(&Tweet{})
-	db.DropTableIfExists(&Conversation{})
-
-	err = db.AutoMigrate(&User{}, &Tweet{}, &Conversation{}).Error
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "cannot migrate tables")
-		os.Exit(1)
-	}
 
 	client, err = LoadCredentials()
 	if err != nil {
-		fmt.Printf("Could not parse CREDENTIALS file: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Could not parse CREDENTIALS file: %v\n", err)
 		os.Exit(1)
 	}
 
 	data, err := ioutil.ReadFile("twitter_id_str_data.txt")
 	if err != nil {
-		fmt.Printf("Could not read twitter_id_str_data.txt: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Could not read twitter_id_str_data.txt: %v\n", err)
 		os.Exit(1)
 	}
 	lines := strings.Split(string(data), "\n")
-	for i, line := range lines {
-		if i < 11 {
-			fmt.Println("i = ", strconv.Itoa(i))
-			ids := strings.Split(line, "\t")
-			firstID, err := SaveTweet(&db, client, ids[0])
-			if err != nil {
-				panic(err)
-			}
-			secondID, err := SaveTweet(&db, client, ids[1])
-			if err != nil {
-				panic(err)
-			}
-			conversation := Conversation{
-				FirstTweetID:  firstID,
-				SecondTweetID: secondID,
-			}
-			err = db.Create(&conversation).Error
-			if err != nil {
-				panic(err)
-			}
+	for i := startIdx; i < len(lines); i++ {
+		logger.Printf("index of lines is %d\n", i)
+		line := lines[i]
+		ids := strings.Split(line, "\t")
+		firstID, err, limit := SaveTweet(&db, client, ids[0])
+		if limit {
+			startIdx = i
+			logger.Printf("Next, start at line index %d\n", startIdx)
+			return
 		}
+		if err != nil {
+			panic(err)
+		}
+		secondID, err, limit := SaveTweet(&db, client, ids[1])
+		if limit {
+			startIdx = i
+			logger.Printf("Next, start at line index %d\n", startIdx)
+			return
+		}
+		if err != nil {
+			panic(err)
+		}
+		conversation := Conversation{
+			FirstTweetID:  firstID,
+			SecondTweetID: secondID,
+		}
+		err = db.Create(&conversation).Error
+		if err != nil {
+			panic(err)
+		}
+		logger.Println("insert conversation(" + ids[0] + ", " + ids[1] + ")")
 	}
+}
+
+func main() {
+	logger := GetLogger()
+
+	reset = flag.Bool("reset", false, "reset database")
+	start = flag.Int("start", 0, "start index")
+	flag.Parse()
+	if *reset {
+		fmt.Fprintln(os.Stdout, "reset tables...")
+		logger.Println("reset tables...")
+		Reset()
+		fmt.Fprintln(os.Stdout, "done")
+		logger.Println("done")
+	}
+	startIdx = *start
+
+	fmt.Fprintf(os.Stdout, "starting at %d ...\n", *start)
+
+	c := cron.New()
+	c.AddFunc("0 */15 * * * *", EveryFifteen)
+	c.Start()
+
+	for {
+		time.Sleep(10000000000000)
+		fmt.Println("still sleeping...")
+	}
+
 }

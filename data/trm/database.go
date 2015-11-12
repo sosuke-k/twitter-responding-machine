@@ -2,6 +2,7 @@ package trm
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/codingneo/twittergo"
@@ -12,7 +13,7 @@ import (
 )
 
 // DbName is the database name
-const DbName = "testdatabase"
+const DbName = "trm"
 
 // UserName is user name of database
 const UserName = "trm"
@@ -57,17 +58,20 @@ type Conversation struct {
 }
 
 // SaveTweet to database
-func SaveTweet(db *gorm.DB, client *twittergo.Client, id string) (tweetID int, err error) {
-	tweet, err := GetTweet(client, id)
+func SaveTweet(db *gorm.DB, client *twittergo.Client, id string) (tweetID int, err error, limit bool) {
+	logger := GetLogger()
+	tweet, err, limit := GetTweet(client, id)
+	if limit {
+		return
+	}
 	var data Tweet
 	if err != nil {
-		fmt.Println("Could not get tweet:" + id)
+		logger.Println("Could not get tweet:" + id)
 		data = Tweet{
 			TwitterID: id,
 			Success:   0,
 		}
 	} else {
-		//check users table
 		var user User
 		name := tweet.User().Name()
 		nickname := tweet.User().ScreenName()
@@ -80,6 +84,9 @@ func SaveTweet(db *gorm.DB, client *twittergo.Client, id string) (tweetID int, e
 			if err != nil {
 				return
 			}
+			logger.Printf("user whose name is %s exists.\n", nickname)
+		} else {
+			logger.Printf("insert user(%s)\n", nickname)
 		}
 
 		data = Tweet{
@@ -94,6 +101,38 @@ func SaveTweet(db *gorm.DB, client *twittergo.Client, id string) (tweetID int, e
 	if err != nil {
 		return
 	}
+	logger.Printf("insert tweet(id:%s)\n", id)
 	tweetID = data.ID
 	return
+}
+
+// Reset tables of database
+func Reset() {
+	db, err := DB()
+	if err != nil {
+		return
+	}
+	defer db.Close()
+
+	err = db.DropTableIfExists(&User{}).Error
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "cannot drop users table")
+		return
+	}
+	err = db.DropTableIfExists(&Tweet{}).Error
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "cannot drop users table")
+		return
+	}
+	err = db.DropTableIfExists(&Conversation{}).Error
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "cannot drop users table")
+		return
+	}
+
+	err = db.AutoMigrate(&User{}, &Tweet{}, &Conversation{}).Error
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "cannot migrate tables")
+		os.Exit(1)
+	}
 }
