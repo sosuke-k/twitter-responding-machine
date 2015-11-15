@@ -4,10 +4,6 @@ Twitter free data for Japanese task of [NTCIR-12 STC](http://ntcir12.noahlab.com
 
 I used [GORM](https://github.com/jinzhu/gorm), MySQL, [cron](https://github.com/robfig/cron) and [twittergo](https://github.com/kurrik/twittergo) and referred to [twittergo-examples](https://github.com/kurrik/twittergo-examples).
 
-## Structure
-
-![https://gyazo.com/57d73011d2c9135f8a13f7e5759dbef6](https://i.gyazo.com/57d73011d2c9135f8a13f7e5759dbef6.png)
-
 ## preliminary
 
 ### Tweet ID Dataset
@@ -87,6 +83,60 @@ First, I try every 15 minutes, but this
 ### Log
 
 Please, look at `trm.log`.
+
+## structure
+
+```
+mysql> use trm
+Reading table information for completion of table and column names
+You can turn off this feature to get a quicker startup with -A
+
+Database changed
+mysql> SHOW TABLES;
++---------------+
+| Tables_in_trm |
++---------------+
+| conversations |
+| tweets        |
+| users         |
++---------------+
+3 rows in set (0.00 sec)
+
+mysql> DESC users;
++----------+--------------+------+-----+---------+----------------+
+| Field    | Type         | Null | Key | Default | Extra          |
++----------+--------------+------+-----+---------+----------------+
+| id       | int(11)      | NO   | PRI | NULL    | auto_increment |
+| name     | varchar(255) | NO   |     | NULL    |                |
+| nickname | varchar(255) | NO   | UNI | NULL    |                |
++----------+--------------+------+-----+---------+----------------+
+3 rows in set (0.00 sec)
+
+mysql> DESC tweets;
++------------+--------------+------+-----+---------+----------------+
+| Field      | Type         | Null | Key | Default | Extra          |
++------------+--------------+------+-----+---------+----------------+
+| id         | int(11)      | NO   | PRI | NULL    | auto_increment |
+| twitter_id | varchar(255) | NO   | UNI | NULL    |                |
+| success    | int(11)      | NO   |     | NULL    |                |
+| user_id    | int(11)      | YES  | MUL | NULL    |                |
+| text       | varchar(255) | YES  |     | NULL    |                |
+| created_at | timestamp    | YES  |     | NULL    |                |
++------------+--------------+------+-----+---------+----------------+
+6 rows in set (0.01 sec)
+
+mysql> DESC conversations;
++-----------------+---------+------+-----+---------+----------------+
+| Field           | Type    | Null | Key | Default | Extra          |
++-----------------+---------+------+-----+---------+----------------+
+| id              | int(11) | NO   | PRI | NULL    | auto_increment |
+| first_tweet_id  | int(11) | NO   | MUL | NULL    |                |
+| second_tweet_id | int(11) | NO   | MUL | NULL    |                |
++-----------------+---------+------+-----+---------+----------------+
+3 rows in set (0.00 sec)
+```
+
+![https://gyazo.com/57d73011d2c9135f8a13f7e5759dbef6](https://i.gyazo.com/57d73011d2c9135f8a13f7e5759dbef6.png)
 
 ## notice
 
