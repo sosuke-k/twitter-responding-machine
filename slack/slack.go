@@ -22,7 +22,9 @@ import (
 )
 
 type payload struct {
-	Text string `json:"text"`
+	Username  string `json:"username"`
+	IconEmoji string `json:"jcon_emoji"`
+	Text      string `json:"text"`
 }
 
 // Post send a plain message
@@ -36,7 +38,9 @@ func Post(text string) error {
 	webhookURL := os.Getenv("INCOMMING_URL")
 
 	p, err := json.Marshal(&payload{
-		Text: text,
+		Username:  "trm",
+		IconEmoji: ":trm:",
+		Text:      text,
 	})
 	if err != nil {
 		return err
