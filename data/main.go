@@ -33,7 +33,8 @@ func EverySeventeen() {
 
 	db, err = DB()
 	if err != nil {
-		return
+		fmt.Fprintf(os.Stderr, "Could not open database: %v\n", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
