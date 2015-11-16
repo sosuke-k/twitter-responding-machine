@@ -88,6 +88,16 @@ First, I try every 15 minutes, but this
 
 Please, look at `trm.log`.
 
+### Notification Network Error
+
+Please set `INCOMMING_URL` of environment variable with ["github.comjoho/godotenv"](https://github.com/joho/godotenv)
+
+.env sample:
+
+```
+INCOMMING_URL="https://hooks.slack.com/services/..."
+```
+
 ## notice
 
 ### Importing local package

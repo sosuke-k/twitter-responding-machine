@@ -5,10 +5,13 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/codingneo/twittergo"
 	"github.com/kurrik/oauth1a"
+
+	"../../slack"
 )
 
 // LoadCredentials load developer information from CREDENTIALS
@@ -48,7 +51,11 @@ func GetTweet(client *twittergo.Client, id string) (tweet *twittergo.Tweet, err 
 	if err != nil {
 		logger.Printf("Could not send request: %v\n", err)
 		logger.Println("Please see https://twitter.com/statuses/" + id)
-		return
+		err := slack.Post("Could not send request. Please see log file.")
+		if err != nil {
+			panic(err)
+		}
+		os.Exit(1)
 	}
 	tweet = &twittergo.Tweet{}
 	err = resp.Parse(tweet)
