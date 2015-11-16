@@ -10,6 +10,7 @@ import (
 
 	"github.com/codingneo/twittergo"
 	"github.com/jinzhu/gorm"
+	"github.com/joho/godotenv"
 	"github.com/robfig/cron"
 
 	. "./trm"
@@ -97,6 +98,10 @@ func main() {
 		logger.Println("done")
 	}
 	startIdx = *start
+
+	if err := godotenv.Load("../slack/.env"); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+	}
 
 	fmt.Fprintf(os.Stdout, "starting at %d ...\n", *start)
 
