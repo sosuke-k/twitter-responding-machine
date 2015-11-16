@@ -16,6 +16,7 @@ import (
 )
 
 var reset *bool
+var update *bool
 var start *int
 var startIdx int
 
@@ -51,7 +52,7 @@ func EverySeventeen() {
 		logger.Printf("index of lines is %d\n", i)
 		line := lines[i]
 		ids := strings.Split(line, "\t")
-		firstID, err, limit := SaveTweet(&db, client, ids[0])
+		firstID, err, limit := SaveTweet(&db, client, ids[0], *update)
 		if limit {
 			startIdx = i
 			logger.Printf("Next, start at line index %d\n", startIdx)
@@ -60,7 +61,7 @@ func EverySeventeen() {
 		if err != nil {
 			panic(err)
 		}
-		secondID, err, limit := SaveTweet(&db, client, ids[1])
+		secondID, err, limit := SaveTweet(&db, client, ids[1], *update)
 		if limit {
 			startIdx = i
 			logger.Printf("Next, start at line index %d\n", startIdx)
@@ -85,6 +86,7 @@ func main() {
 	logger := GetLogger()
 
 	reset = flag.Bool("reset", false, "reset database")
+	update = flag.Bool("update", false, "update record")
 	start = flag.Int("start", 0, "start index")
 	flag.Parse()
 	if *reset {

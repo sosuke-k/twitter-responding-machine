@@ -58,35 +58,48 @@ type Conversation struct {
 }
 
 // SaveTweet to database
-func SaveTweet(db *gorm.DB, client *twittergo.Client, id string) (tweetID int, err error, limit bool) {
+func SaveTweet(db *gorm.DB, client *twittergo.Client, id string, update bool) (tweetID int, err error, limit bool) {
 	logger := GetLogger()
-	tweet, err, limit := GetTweet(client, id)
+	var (
+		data  Tweet
+		tweet *twittergo.Tweet
+	)
+
+	if db.Where("twitter_id = ?", id).First(&data).RecordNotFound() {
+		logger.Printf("record(id:%s) not found\n", id)
+		update = false
+		tweet, err, limit = GetTweet(client, id)
+	} else {
+		if update && data.Success == 0 {
+			logger.Printf("update record(id:%s)\n", id)
+			tweet, err, limit = GetTweet(client, id)
+		}
+		return
+	}
+
+	// When there is Twitter API Limit, return.
 	if limit {
 		return
 	}
-	var data Tweet
+
 	if err != nil {
+		// due to neither API Limit or Network Error
+		// e.g. Authorization Error, so on...
 		logger.Println("Could not get tweet:" + id)
 		data = Tweet{
 			TwitterID: id,
 			Success:   0,
 		}
 	} else {
-		var user User
 		name := tweet.User().Name()
 		nickname := tweet.User().ScreenName()
-		if db.Where("nickname = ?", nickname).First(&user).RecordNotFound() {
-			user = User{
-				Name:     name,
-				Nickname: nickname,
-			}
-			err = db.Create(&user).Error
-			if err != nil {
-				return
-			}
-			logger.Printf("insert user(%s)\n", nickname)
-		} else {
-			logger.Printf("user whose name is %s exists.\n", nickname)
+		user := User{
+			Name:     name,
+			Nickname: nickname,
+		}
+		err = createOrUpdateUser(db, &user)
+		if err != nil {
+			return
 		}
 
 		data = Tweet{
@@ -97,12 +110,33 @@ func SaveTweet(db *gorm.DB, client *twittergo.Client, id string) (tweetID int, e
 			CreatedAt: tweet.CreatedAt(),
 		}
 	}
-	err = db.Create(&data).Error
+
+	if update {
+		err = db.Save(&data).Error
+	} else {
+		err = db.Create(&data).Error
+	}
 	if err != nil {
+		logger.Printf("could not insert tweet(id:%s)\n", id)
 		return
 	}
 	logger.Printf("insert tweet(id:%s)\n", id)
 	tweetID = data.ID
+	return
+}
+
+func createOrUpdateUser(db *gorm.DB, user *User) (err error) {
+	logger := GetLogger()
+	if db.Where("nickname = ?", user.Nickname).First(&user).RecordNotFound() {
+		err = db.Create(&user).Error
+		if err != nil {
+			logger.Printf("could not insert user(%s)\n", user.Nickname)
+			return
+		}
+		logger.Printf("insert user(%s)\n", user.Nickname)
+	} else {
+		logger.Printf("user whose name is %s exists.\n", user.Nickname)
+	}
 	return
 }
 
