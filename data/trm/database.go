@@ -58,7 +58,7 @@ type Conversation struct {
 }
 
 // SaveTweet to database
-func SaveTweet(db *gorm.DB, client *twittergo.Client, id string, update bool) (tweetID int, err error, limit bool) {
+func SaveTweet(db *gorm.DB, client *twittergo.Client, id string, update bool) (tweetID int, err error) {
 	logger := GetLogger()
 	var (
 		data  Tweet
@@ -68,27 +68,35 @@ func SaveTweet(db *gorm.DB, client *twittergo.Client, id string, update bool) (t
 	if db.Where("twitter_id = ?", id).First(&data).RecordNotFound() {
 		logger.Printf("record(id:%s) not found\n", id)
 		update = false
-		tweet, err, limit = GetTweet(client, id)
+		tweet, err = GetTweet(client, id)
 	} else {
 		if update && data.Success == 0 {
 			logger.Printf("update record(id:%s)\n", id)
-			tweet, err, limit = GetTweet(client, id)
+			tweet, err = GetTweet(client, id)
 		}
 		return
 	}
 
 	// When there is Twitter API Limit, return.
-	if limit {
-		return
-	}
-
 	if err != nil {
-		// due to neither API Limit or Network Error
-		// e.g. Authorization Error, so on...
-		logger.Println("Could not get tweet:" + id)
-		data = Tweet{
-			TwitterID: id,
-			Success:   0,
+		switch err.(*TwitterError).Op {
+		case OpRequest, OpNetwork:
+			logger.Fatalln(err)
+			os.Exit(1)
+		case OpLimit:
+			return
+		case OpResponse:
+			// due to neither API Limit or Network Error
+			// e.g. Authorization Error, so on...
+			logger.Println("Could not get tweet:" + id)
+			logger.Fatalln(err)
+			data = Tweet{
+				TwitterID: id,
+				Success:   0,
+			}
+		default:
+			logger.Fatalln(err)
+			panic(err)
 		}
 	} else {
 		name := tweet.User().Name()
@@ -101,7 +109,6 @@ func SaveTweet(db *gorm.DB, client *twittergo.Client, id string, update bool) (t
 		if err != nil {
 			return
 		}
-
 		data = Tweet{
 			TwitterID: id,
 			Success:   1,
