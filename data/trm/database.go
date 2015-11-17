@@ -10,6 +10,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/jinzhu/gorm"
+
+	"../../slack"
 )
 
 // DbName is the database name
@@ -82,6 +84,10 @@ func SaveTweet(db *gorm.DB, client *twittergo.Client, id string, update bool) (t
 		switch err.(*TwitterError).Op {
 		case OpRequest, OpNetwork:
 			logger.Fatalln(err)
+			err := slack.Post("Could not send request. Please see log file.")
+			if err != nil {
+				panic(err)
+			}
 			os.Exit(1)
 		case OpLimit:
 			return

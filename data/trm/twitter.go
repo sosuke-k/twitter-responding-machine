@@ -50,13 +50,6 @@ func GetTweet(client *twittergo.Client, id string) (tweet *twittergo.Tweet, err 
 	if err != nil {
 		err = &TwitterError{Op: OpNetwork, ID: id, Err: err}
 		return
-		// logger.Printf("Could not send request: %v\n", err)
-		// logger.Println("Please see https://twitter.com/statuses/" + id)
-		// err := slack.Post("Could not send request. Please see log file.")
-		// if err != nil {
-		// 	panic(err)
-		// }
-		// os.Exit(1)
 	}
 
 	// parse response
