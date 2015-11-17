@@ -54,22 +54,22 @@ func EverySeventeen() {
 		logger.Printf("index of lines is %d\n", i)
 		line := lines[i]
 		ids := strings.Split(line, "\t")
-		firstID, err, limit := SaveTweet(&db, client, ids[0], *update)
-		if limit {
-			startIdx = i
-			logger.Printf("Next, start at line index %d\n", startIdx)
-			return
-		}
+		firstID, err := SaveTweet(&db, client, ids[0], *update)
 		if err != nil {
+			if err.(*TwitterError).Op == OpLimit {
+				startIdx = i
+				logger.Printf("Next, start at line index %d\n", startIdx)
+				return
+			}
 			panic(err)
 		}
-		secondID, err, limit := SaveTweet(&db, client, ids[1], *update)
-		if limit {
-			startIdx = i
-			logger.Printf("Next, start at line index %d\n", startIdx)
-			return
-		}
+		secondID, err := SaveTweet(&db, client, ids[1], *update)
 		if err != nil {
+			if err.(*TwitterError).Op == OpLimit {
+				startIdx = i
+				logger.Printf("Next, start at line index %d\n", startIdx)
+				return
+			}
 			panic(err)
 		}
 		conversation := Conversation{
