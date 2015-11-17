@@ -75,11 +75,12 @@ func SaveTweet(db *gorm.DB, client *twittergo.Client, id string, update bool) (t
 		if update && data.Success == 0 {
 			logger.Printf("update record(id:%s)\n", id)
 			tweet, err = GetTweet(client, id)
+		} else {
+			// When record already exists and have failed to get tweet
+			return
 		}
-		return
 	}
 
-	// When there is Twitter API Limit, return.
 	if err != nil {
 		switch err.(*TwitterError).Op {
 		case OpRequest, OpNetwork:
@@ -90,6 +91,7 @@ func SaveTweet(db *gorm.DB, client *twittergo.Client, id string, update bool) (t
 			}
 			os.Exit(1)
 		case OpLimit:
+			// When there is Twitter API Limit, return.
 			return
 		case OpResponse:
 			// due to neither API Limit or Network Error
