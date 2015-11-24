@@ -1,4 +1,4 @@
-package trm
+package logger
 
 import (
 	"fmt"
@@ -7,14 +7,15 @@ import (
 	"path"
 )
 
+// TRMLogger ...
 type TRMLogger struct {
 	logPath string
 }
 
 var instance *TRMLogger
 
-// GetLogger return singlton instance
-func GetLogger() *TRMLogger {
+// GetInstance return singlton instance
+func GetInstance() *TRMLogger {
 	if instance == nil {
 		pwd, err := os.Getwd()
 		if err != nil {

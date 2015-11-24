@@ -6,43 +6,14 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	"time"
 
-	"github.com/codingneo/twittergo"
-	"github.com/jinzhu/gorm"
 	"github.com/joho/godotenv"
-	"github.com/robfig/cron"
-
-	. "./trm"
+	"github.com/sosuke-k/twitter-responding-machine/data/logger"
+	"github.com/sosuke-k/twitter-responding-machine/data/slack"
+	"github.com/sosuke-k/twitter-responding-machine/data/twitter"
 )
 
-var reset *bool
-var update *bool
-var start *int
-var startIdx int
-
-// EverySeventeen called per 17 minutes
-func EverySeventeen() {
-	logger := GetLogger()
-
-	var (
-		err    error
-		db     gorm.DB
-		client *twittergo.Client
-	)
-
-	db, err = DB()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not open database: %v\n", err)
-		os.Exit(1)
-	}
-	defer db.Close()
-
-	client, err = LoadCredentials()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not parse CREDENTIALS file: %v\n", err)
-		os.Exit(1)
-	}
+func duplicationCheck(start int) {
 
 	data, err := ioutil.ReadFile("twitter_id_str_data.txt")
 	if err != nil {
@@ -50,69 +21,103 @@ func EverySeventeen() {
 		os.Exit(1)
 	}
 	lines := strings.Split(string(data), "\n")
-	for i := startIdx; i < len(lines); i++ {
+	line := lines[start]
+	itemID := strings.Split(line, "\t")[0]
+
+	db, err := twitter.DB()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not open database: %v\n", err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	var tweet twitter.Tweet
+	if db.Where("item_id = ?", itemID).First(&tweet).RecordNotFound() {
+		fmt.Fprintf(os.Stdout, "tweet(id:%s) not exists\n", itemID)
+		fmt.Println("this start index is ok")
+	} else {
+		fmt.Fprintf(os.Stdout, "tweet(id:%s) exists\n", itemID)
+		fmt.Println("this start index is not good")
+	}
+
+}
+
+func gather(start int) {
+	logger := logger.GetInstance()
+
+	db, err := twitter.DB()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not open database: %v\n", err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	data, err := ioutil.ReadFile("twitter_id_str_data.txt")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not open database: %v\n", err)
+		os.Exit(1)
+	}
+	lines := strings.Split(string(data), "\n")
+	for i := start; i < len(lines); i++ {
+		fmt.Printf("index of lines is %d\n", i)
 		logger.Printf("index of lines is %d\n", i)
 		line := lines[i]
 		ids := strings.Split(line, "\t")
-		firstID, err := SaveTweet(&db, client, ids[0], *update)
+		tweet := twitter.Tweet{ItemID: ids[0]}
+		err := tweet.Fetch()
 		if err != nil {
-			if err.(*TwitterError).Op == OpLimit {
-				startIdx = i
-				logger.Printf("Next, start at line index %d\n", startIdx)
-				return
-			}
-			panic(err)
+			logger.Println("Could not fetch tweet:")
+			logger.Printf("    item is = %s\n", tweet.ItemID)
+			logger.Fatalln(err)
+			fmt.Fprintf(os.Stderr, "Could not fetch tweet: %v\n", err)
 		}
-		secondID, err := SaveTweet(&db, client, ids[1], *update)
+		err = tweet.Save(&db)
 		if err != nil {
-			if err.(*TwitterError).Op == OpLimit {
-				startIdx = i
-				logger.Printf("Next, start at line index %d\n", startIdx)
-				return
-			}
-			panic(err)
+			logger.Println("Could not save tweet:")
+			logger.Printf("    item is = %s\n", tweet.ItemID)
+			logger.Fatalln(err)
+			fmt.Fprintf(os.Stderr, "Could not save tweet: %v\n", err)
 		}
-		conversation := Conversation{
-			FirstTweetID:  firstID,
-			SecondTweetID: secondID,
-		}
-		err = db.Create(&conversation).Error
-		if err != nil {
-			panic(err)
-		}
-		logger.Println("insert conversation(" + ids[0] + ", " + ids[1] + ")")
+		logger.Println("Successed inserting tweet:")
+		logger.Printf("    item is = %s\n", tweet.ItemID)
 	}
 }
 
 func main() {
-	logger := GetLogger()
+	logger := logger.GetInstance()
 
-	reset = flag.Bool("reset", false, "reset database")
-	update = flag.Bool("update", false, "update record")
-	start = flag.Int("start", 0, "start index")
+	check := flag.Bool("check", false, "duplication id check of tweet at start line")
+	reset := flag.Bool("reset", false, "reset database")
+	start := flag.Int("start", 0, "start index")
+	channel := flag.String("slack", "", "channel of slack if notification needed")
 	flag.Parse()
+
+	fmt.Fprintf(os.Stdout, "starting line number = %d\n", *start)
+
+	if *check {
+		duplicationCheck(*start)
+		return
+	}
+
+	if *channel != "" {
+		if err := godotenv.Load(".env"); err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+	}
+
 	if *reset {
 		fmt.Fprintln(os.Stdout, "reset tables...")
 		logger.Println("reset tables...")
-		Reset()
+		twitter.Reset()
 		fmt.Fprintln(os.Stdout, "done")
 		logger.Println("done")
 	}
-	startIdx = *start
 
-	if err := godotenv.Load("../slack/.env"); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-	}
+	gather(*start)
 
-	fmt.Fprintf(os.Stdout, "starting at %d ...\n", *start)
-
-	c := cron.New()
-	c.AddFunc("@every 17m", EverySeventeen)
-	c.Start()
-
-	for {
-		time.Sleep(10000000000000)
-		fmt.Println("still sleeping...")
+	if *channel != "" {
+		slack.Post(*channel, "finished gathering!")
 	}
 
 }

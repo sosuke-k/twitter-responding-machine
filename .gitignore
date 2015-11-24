@@ -24,10 +24,7 @@ _testmain.go
 *.prof
 
 # dotenv
-.env
-
-# twittergo
-data/CREDENTIALS
+data/.env
 
 # STC dataset
 data/twitter_id_str_data.txt
