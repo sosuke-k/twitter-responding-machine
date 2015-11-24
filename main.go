@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	twitter.Reset()
+	// twitter.Reset()
 
 	// tweet := twitter.Tweet{ItemID: "418033807850496002"}
 	// err := tweet.Fetch()
