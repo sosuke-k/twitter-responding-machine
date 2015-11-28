@@ -28,6 +28,7 @@ data/.env
 
 # STC dataset
 data/twitter_id_str_data.txt
+data/failed_post_ids.tsv
 
 # log
 data/trm.log
