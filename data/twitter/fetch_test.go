@@ -1,7 +1,8 @@
 package twitter_test
 
-import "testing"
 import (
+	"testing"
+
 	"../twitter"
 	. "github.com/smartystreets/goconvey/convey"
 )
