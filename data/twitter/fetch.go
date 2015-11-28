@@ -32,7 +32,20 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	return " https://twitter.com/statuses/" + e.ID + ": " + e.Err.Error()
+	switch e.Op {
+	case Op.Query:
+		return e.Err.Error()
+	case Op.Request:
+		return fmt.Sprintf("goquery.NewDocument(https://twitter.com/statuses/%s): %s", e.ID, e.Err.Error())
+	case Op.Authorization:
+		return fmt.Sprintf("https://twitter.com/statuses/%s redirected to %s: %s", e.ID, e.URL, e.Err.Error())
+	case Op.NotExisting:
+		return fmt.Sprintf("https://twitter.com/statuses/%s: %s", e.ID, e.Err.Error())
+	case Op.Parse:
+		return fmt.Sprintf("Parse Error https://twitter.com/statuses/%s: %s", e.ID, e.Err.Error())
+	default:
+		return fmt.Sprintf("Op not match https://twitter.com/statuses/%s: %s", e.ID, e.Err.Error())
+	}
 }
 
 // Tweet ...
