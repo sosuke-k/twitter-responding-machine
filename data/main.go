@@ -107,7 +107,8 @@ func retryGather(start int, channel string) {
 		tweet := twitter.Tweet{ItemID: itemID}
 		err := tweet.Fetch()
 		if err != nil {
-			if err.(*twitter.Error).Op == twitter.Op.Parse {
+			op := err.(*twitter.Error).Op
+			if op == twitter.Op.Parse || op == twitter.Op.Request {
 				slack.Post(channel, err.Error())
 			}
 			logger.Println("Could not fetch tweet:")
