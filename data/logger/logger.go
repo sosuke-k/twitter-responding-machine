@@ -39,16 +39,16 @@ func (mylogger *TRMLogger) Println(s string) {
 	log.Println(s)
 }
 
-func (mylogger *TRMLogger) Fatalln(e error) {
-	logf, err := os.OpenFile(mylogger.logPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		fmt.Fprintf(os.Stdout, "error opening file: %v", err)
-	}
-	defer logf.Close()
-
-	log.SetOutput(logf)
-	log.Fatalln(e)
-}
+// func (mylogger *TRMLogger) Fatalln(e error) {
+// 	logf, err := os.OpenFile(mylogger.logPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+// 	if err != nil {
+// 		fmt.Fprintf(os.Stdout, "error opening file: %v", err)
+// 	}
+// 	defer logf.Close()
+//
+// 	log.SetOutput(logf)
+// 	log.Fatalln(e)
+// }
 
 func (mylogger *TRMLogger) Printf(format string, e interface{}) {
 	logf, err := os.OpenFile(mylogger.logPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)

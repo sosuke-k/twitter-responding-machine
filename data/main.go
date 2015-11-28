@@ -68,19 +68,66 @@ func gather(start int) {
 		if err != nil {
 			logger.Println("Could not fetch tweet:")
 			logger.Printf("    item is = %s\n", tweet.ItemID)
-			logger.Fatalln(err)
+			logger.Println(err.Error())
 			fmt.Fprintf(os.Stderr, "Could not fetch tweet: %v\n", err)
 		}
 		err = tweet.Save(&db)
 		if err != nil {
 			logger.Println("Could not save tweet:")
 			logger.Printf("    item is = %s\n", tweet.ItemID)
-			logger.Fatalln(err)
+			logger.Println(err.Error())
 			fmt.Fprintf(os.Stderr, "Could not save tweet: %v\n", err)
 		}
 		logger.Println("Successed inserting tweet:")
 		logger.Printf("    item is = %s\n", tweet.ItemID)
 	}
+}
+
+func retryGather(start int, channel string) {
+	logger := logger.GetInstance()
+
+	db, err := twitter.DB()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not open database: %v\n", err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	data, err := ioutil.ReadFile("failed_post_ids.tsv")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not open failed_post_ids.tsv: %v\n", err)
+		os.Exit(1)
+	}
+	lines := strings.Split(string(data), "\n")
+	fmt.Fprintf(os.Stdout, "%d lines in failed_post_ids.tsv", len(lines))
+	for i := start; i < len(lines); i++ {
+		fmt.Printf("index of lines is %d\n", i)
+		logger.Printf("index of lines is %d\n", i)
+		itemID := lines[i]
+		tweet := twitter.Tweet{ItemID: itemID}
+		err := tweet.Fetch()
+		if err != nil {
+			if err.(*twitter.Error).Op == twitter.Op.Parse {
+				slack.Post(channel, err.Error())
+			}
+			logger.Println("Could not fetch tweet:")
+			logger.Printf("    item is = %s\n", tweet.ItemID)
+			logger.Println(err.Error())
+			fmt.Fprintf(os.Stderr, "Could not fetch tweet: %v\n", err)
+			continue
+		}
+		err = tweet.Save(&db)
+		if err != nil {
+			slack.Post(channel, "Could not save tweet:\n  https://twitter.com/statuses/"+tweet.ItemID)
+			logger.Println("Could not save tweet:")
+			logger.Printf("    item is = %s\n", tweet.ItemID)
+			logger.Println(err.Error())
+			fmt.Fprintf(os.Stderr, "Could not save tweet: %v\n", err)
+		}
+		logger.Println("Successed inserting tweet:")
+		logger.Printf("    item is = %s\n", tweet.ItemID)
+	}
+
 }
 
 func main() {
@@ -89,6 +136,7 @@ func main() {
 	check := flag.Bool("check", false, "duplication id check of tweet at start line")
 	reset := flag.Bool("reset", false, "reset database")
 	start := flag.Int("start", 0, "start index")
+	retry := flag.Bool("retry", false, "retry failed ids")
 	channel := flag.String("slack", "", "channel of slack if notification needed")
 	flag.Parse()
 
@@ -104,6 +152,16 @@ func main() {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
 		}
+	}
+
+	if *retry {
+		if *channel == "" {
+			fmt.Fprintln(os.Stdout, "Please, give channel argument")
+			os.Exit(1)
+		}
+		retryGather(*start, *channel)
+		slack.Post(*channel, "finished retry gathering!")
+		return
 	}
 
 	if *reset {
