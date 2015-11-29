@@ -93,7 +93,7 @@ func retryGather(start int, channel string) {
 	}
 	defer db.Close()
 
-	data, err := ioutil.ReadFile("failed_post_ids.tsv")
+	data, err := ioutil.ReadFile("failed_ids.tsv")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not open failed_post_ids.tsv: %v\n", err)
 		os.Exit(1)
@@ -107,15 +107,16 @@ func retryGather(start int, channel string) {
 		tweet := twitter.Tweet{ItemID: itemID}
 		err := tweet.Fetch()
 		if err != nil {
-			op := err.(*twitter.Error).Op
-			if op == twitter.Op.Parse || op == twitter.Op.Request {
-				slack.Post(channel, err.Error())
-			}
 			logger.Println("Could not fetch tweet:")
 			logger.Printf("    item is = %s\n", tweet.ItemID)
 			logger.Println(err.Error())
 			fmt.Fprintf(os.Stderr, "Could not fetch tweet: %v\n", err)
-			continue
+
+			op := err.(*twitter.Error).Op
+			if op != twitter.Op.Authorization && op != twitter.Op.NotExisting {
+				slack.Post(channel, err.Error())
+				continue
+			}
 		}
 		err = tweet.Save(&db)
 		if err != nil {

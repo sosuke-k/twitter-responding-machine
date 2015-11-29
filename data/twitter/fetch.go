@@ -79,6 +79,7 @@ func (tweet *Tweet) Fetch() (err error) {
 	if !strings.Contains(doc.Url.Path, tweet.ItemID) {
 		err = errors.New("May be redirected because of authorization error")
 		err = &Error{Op: Op.Authorization, ID: tweet.ItemID, URL: doc.Url.String(), Err: err}
+		tweet.Success = -1
 		return
 	}
 
@@ -87,6 +88,7 @@ func (tweet *Tweet) Fetch() (err error) {
 		if notExists := checkExisting(doc); notExists {
 			err = errors.New("this page not exists")
 			err = &Error{Op: Op.NotExisting, ID: tweet.ItemID, URL: doc.Url.String(), Err: err}
+			tweet.Success = -2
 		} else {
 			err = &Error{Op: Op.Parse, ID: tweet.ItemID, URL: doc.Url.String(), Err: err}
 		}
