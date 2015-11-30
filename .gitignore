@@ -1,0 +1,41 @@
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
+*.so
+
+# Folders
+_obj
+_test
+
+# Architecture specific extensions/prefixes
+*.[568vq]
+[568vq].out
+
+*.cgo1.go
+*.cgo2.c
+_cgo_defun.c
+_cgo_gotypes.go
+_cgo_export.*
+
+_testmain.go
+
+*.exe
+*.test
+*.prof
+
+# iPython
+.ipynb_checkpoints
+
+# dotenv
+data/.env
+
+# STC dataset
+data/twitter_id_str_data.txt
+data/dev.txt
+data/failed_ids.tsv
+
+# log
+data/trm.log
+
+# dump
+*.dump
